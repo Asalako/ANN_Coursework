@@ -34,7 +34,7 @@ for key in temp:
         
     columnData = temp[key]
     
-    for i in range( len(columnData) - 1):
+    for i in range( len(columnData)):
         value = columnData[i]
         if pd.isna(value) == True:
             listOfCells.append([columnLetter + str(i + 2), "blank", i+2])
