@@ -35,6 +35,7 @@ class Mlp:
         self.outputNode = -3.92
         self.learningRate = 0.1
         self.bias = 1
+        self.epoch = 0
 
     # =============================================================================
     #         w1 = np.random.randn(network["inputNodes"], network["hiddenNodes"]) #input to hidden layer
@@ -72,24 +73,28 @@ class Mlp:
     # =============================================================================
 
     def backwardPass(self, activations):
+        roundNumber = 4
         deltaOutputs = []
-        sigODervivative = round(self.sigmoidDerivative(self.sigO), 4)
-        deltaO = round((self.desiredOutput - self.sigO) * sigODervivative, 4)
+        sigODervivative = self.sigmoidDerivative(self.sigO)
+        deltaO = (self.desiredOutput - self.sigO) * sigODervivative
 
         for i in range(len(activations)):
             sigDervivative = self.sigmoidDerivative(activations[i])
             delta = self.weights[1][i] * deltaO * sigDervivative
-            deltaOutputs.append(round(delta, 4))
+            deltaOutputs.append(delta)
 
         #Updating all weights
         #updating output node
         self.outputNode += self.learningRate * deltaO * self.bias
+        self.outputNode = round(self.outputNode, roundNumber)
 
         #updating hidden nodes and weights from hidden layer --> output node
         for i in range( len(deltaOutputs) ):
             delta = deltaOutputs[i]
             self.hiddenNodes[i] += self.learningRate * delta * self.bias
+            self.hiddenNodes[i] = round(self.hiddenNodes[i], roundNumber)
             self.weights[1][i] += self.learningRate * delta * activations[i]
+            self.weights[1][i] = round(self.weights[1][i], roundNumber)
 
         #updating weights from inputs --> hidden layer
         for i in range(len(self.weights[0])):
@@ -97,7 +102,11 @@ class Mlp:
             for j in range(len(self.weights[0][0])):
                 weight = self.weights[0][i]
                 weight[j] += self.learningRate * delta * self.inputs[j]
+                weight[j] = round(weight[j], roundNumber)
+
         print(self.weights, self.hiddenNodes, self.outputNode)
+        print(self.sigO)
+        self.epoch += 1
         return
 
     # backward propagate through the network
@@ -114,14 +123,16 @@ class Mlp:
         self.weights[1] += self.sigS.T.dot(deltaOutput)  # adjusting second set of weights
 
     def trainNetwork(self):
+        changed = False
         activations = []
         for i in range(len(self.hiddenNodes)):
-            activations.append(round(self.feedForward(i), 3))
+            activations.append(self.feedForward(i))
 
         sumSo = np.dot(activations, self.weights[1]) + self.outputNode * self.bias
-        self.sigO = round(self.sigmoid(sumSo), 3)
+        self.sigO = self.sigmoid(sumSo)
 
         self.backwardPass(activations)
+
         return
 
 
@@ -191,8 +202,15 @@ outputSet = dictToList(trainingSet, ["PanE"])
 inputSet = [[1, 0]]
 outputSet = [1]
 
+prevSig = -999
 for epoch in range(1):
     for i, o, n in zip(inputSet, outputSet, range(len(inputSet))):
         p = Mlp(i, o)
-        p.trainNetwork()
+        for i in range(20000):
+            p.trainNetwork()
+            if prevSig != p.sigO:
+                prevSig = p.sigO
+            else:
+                print(p.epoch)
+                break
         print()
