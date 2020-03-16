@@ -32,7 +32,7 @@ class Perceptron:
 
     def __init__(self, data, output):
         self.inputs = data
-        self.weights = np.random.uniform(low=-1, high=1, size=len(self.inputs))
+        self.weights = np.random.uniform(low=-1, high=1, size=len(self.inputs)) #hidden node values
         self.learningRate = 0.01
         self.target = output
 
