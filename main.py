@@ -33,7 +33,7 @@ class Mlp:
         w2 = [2, 4]
         self.weights = [w1, w2]
         self.outputNode = -3.92
-        self.learningRate = 0.01
+        self.learningRate = 0.1
         self.bias = 1
 
     # =============================================================================
@@ -54,10 +54,11 @@ class Mlp:
         return sigD
 
     def feedForward(self, node):
-        print(self.inputs[node], self.weights[0][node])
-        Sj = np.dot(self.inputs[node], self.weights[0][node][0]) + self.hiddenNodes[node] * self.bias
+        Sj = 0
+        for i in range( len(self.inputs) ):
+            Sj += self.inputs[i] * self.weights[0][node][i]
+        Sj += self.hiddenNodes[node] * self.bias
         uj = self.sigmoid(Sj)
-        print(uj)
         return uj
 
     # =============================================================================
@@ -73,30 +74,30 @@ class Mlp:
     def backwardPass(self, activations):
         deltaOutputs = []
         sigODervivative = round(self.sigmoidDerivative(self.sigO), 4)
-
         deltaO = round((self.desiredOutput - self.sigO) * sigODervivative, 4)
-        # =============================================================================
-        #         for sigD in sigDOutputs:
-        # =============================================================================
+
         for i in range(len(activations)):
             sigDervivative = self.sigmoidDerivative(activations[i])
             delta = self.weights[1][i] * deltaO * sigDervivative
             deltaOutputs.append(round(delta, 4))
-        print(activations)
 
-        #Updating all weights, hidden nodes, w1, w2
+        #Updating all weights
+        #updating output node
+        self.outputNode += self.learningRate * deltaO * self.bias
+
+        #updating hidden nodes and weights from hidden layer --> output node
         for i in range( len(deltaOutputs) ):
             delta = deltaOutputs[i]
-            self.weights[1][i] += self.learningRate * delta * activations[i]
             self.hiddenNodes[i] += self.learningRate * delta * self.bias
+            self.weights[1][i] += self.learningRate * delta * activations[i]
 
-            # for j in range( len(self.inputs) ):
-            # for w in self.weights[0][i]:
-            #     print(self.inputs)
-            #     w += w * self.learningRate * self.inputs[i]
-            #     print(w)
-            # print("next")
-
+        #updating weights from inputs --> hidden layer
+        for i in range(len(self.weights[0])):
+            delta = deltaOutputs[i]
+            for j in range(len(self.weights[0][0])):
+                weight = self.weights[0][i]
+                weight[j] += self.learningRate * delta * self.inputs[j]
+        print(self.weights, self.hiddenNodes, self.outputNode)
         return
 
     # backward propagate through the network
