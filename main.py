@@ -8,44 +8,40 @@ Created on Fri Mar 13 00:23:27 2020
 import pandas as pd
 import numpy as np
 
-
-# class Percepton:
-
-# =============================================================================
-# class Node:
-#     def __init__(self, inputData, output, weight):
-#         self.weightsToNode = 
-# =============================================================================
-
 class Mlp:
 
     def __init__(self, inputData, output):
+        self.size = 2.5
         self.inputs = inputData
         self.desiredOutput = output
+        self.learningRate = 0.1
+
+        self.epoch = 0
+        self.bias = 1
         network = {
-            "inputNodes": 2,
+            "inputNodes": 5,
             "outputNodes": 1,
             "hiddenNodes": 2
         }
-
-        self.hiddenNodes = [1, -6]  # set to random after
-        w1 = [[3, 4], [6, 5]]  # weights for a node. inputs --> hidden node
-        w2 = [2, 4]
+        w1 = np.random.uniform(-self.size, self.size, ( network["hiddenNodes"], network["inputNodes"]) ) #input to hidden layer
+        w2 = np.random.uniform(-self.size, self.size,  network["hiddenNodes"] ) #hidden to output layer
         self.weights = [w1, w2]
-        self.outputNode = -3.92
-        self.learningRate = 0.1
-        self.bias = 1
-        self.epoch = 0
+        self.hiddenNodes = np.random.uniform( -self.size, self.size, network["hiddenNodes"] )
+        self.outputNode = np.random.uniform(-self.size, self.size, size=1)[0]
 
-    # =============================================================================
-    #         w1 = np.random.randn(network["inputNodes"], network["hiddenNodes"]) #input to hidden layer
-    #         w2 = np.random.randn(network["hiddenNodes"], network["outputNodes"]) #hidden to output layer
+        #self.hiddenNodes = [1, -6]  # set to random after
+        #w1 = [[3, 4], [6, 5]]  # weights for a node. inputs --> hidden node
+        #w2 = [2, 4]
+
+
+
     #         self.weights = [w1, w2]
     #         self.learningRate = 0.01
     #         self.target = output
-    #         self.hiddenBias = np.random.randn(network["hiddenNodes"], network["outputNodes"])
     #         self.outputBias = 1;
-    # =============================================================================
+
+    def output(self):
+        print(self.weights[0])
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
@@ -61,16 +57,6 @@ class Mlp:
         Sj += self.hiddenNodes[node] * self.bias
         uj = self.sigmoid(Sj)
         return uj
-
-    # =============================================================================
-    #     def forwardPropagation(self):
-    #         sumOf = np.dot(self.inputs, self.weights[0]) #dot product of input and set of weights
-    #         #test = np.dot(self.inputs, self.hiddenBias)
-    #         self.sigS = self.sigmoid(sumOf) #activation function
-    #         s2 = np.dot(self.sigS, self.weights[1]) #dot product of hidden layer and set of weights
-    #
-    #         return self.sigmoid(s2)
-    # =============================================================================
 
     def backwardPass(self, activations):
         roundNumber = 4
@@ -104,23 +90,10 @@ class Mlp:
                 weight[j] += self.learningRate * delta * self.inputs[j]
                 weight[j] = round(weight[j], roundNumber)
 
-        print(self.weights, self.hiddenNodes, self.outputNode)
+        print(self.outputNode, sigODervivative)
         print(self.sigO)
         self.epoch += 1
         return
-
-    # backward propagate through the network
-    def backwardPropagation(self, actualOutput):
-        error = self.target - actualOutput  # error in output
-        deltaOutput = error * self.sigmoidDerivative(actualOutput)
-
-        hiddenError = deltaOutput.dot(self.weights[1].T)  # hidden layer weights output error
-        deltaHidden = hiddenError * self.sigmoidDerivative(self.sigS)  # apply derivative of sigmoid to hidden error
-
-        # print(inputMatrix, delta[0])
-        for delta in deltaHidden:
-            self.weights[0] += self.Inputs * delta  # adjusting first set of weights
-        self.weights[1] += self.sigS.T.dot(deltaOutput)  # adjusting second set of weights
 
     def trainNetwork(self):
         changed = False
@@ -130,9 +103,7 @@ class Mlp:
 
         sumSo = np.dot(activations, self.weights[1]) + self.outputNode * self.bias
         self.sigO = self.sigmoid(sumSo)
-
         self.backwardPass(activations)
-
         return
 
 
@@ -194,19 +165,19 @@ dataset = standardiseDataset(data, columns)
 # validationSet = dataset.sample(frac=0.2, replace=False)
 # testingSet =  dataset.sample(frac=0.2, replace=False)
 # =============================================================================
-trainingSet = dataset.sample(n=6, replace=False)
+trainingSet = dataset.sample(frac=0.6, replace=False)
 
 inputSet = dictToList(trainingSet, ["T", "W", "SR", "DSP", "DRH"])
 outputSet = dictToList(trainingSet, ["PanE"])
 
-inputSet = [[1, 0]]
-outputSet = [1]
+# inputSet = [[1, 0]]
+# outputSet = [1]
 
 prevSig = -999
-for epoch in range(1):
-    for i, o, n in zip(inputSet, outputSet, range(len(inputSet))):
+for t in range(1):
+    for i, o in zip(inputSet, outputSet):
         p = Mlp(i, o)
-        for i in range(20000):
+        for i in range(100):
             p.trainNetwork()
             if prevSig != p.sigO:
                 prevSig = p.sigO
@@ -214,3 +185,4 @@ for epoch in range(1):
                 print(p.epoch)
                 break
         print()
+p.output()
