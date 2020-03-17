@@ -11,22 +11,25 @@ class Mlp:
         self.learningRate = lp
 
         self.epoch = 0
-        self.bias = 1
+        self.bias = [1,1]
         network = {
             "inputNodes": 2,
             "outputNodes": 1,
             "hiddenNodes": 2
         }
         network["hiddenNodes"] = nodes
-        w1 = np.random.uniform(-self.size, self.size, ( network["inputNodes"], network["hiddenNodes"]) ) #input to hidden layer between given size
-        w2 = np.random.uniform(-self.size, self.size, ( network["hiddenNodes"], network["outputNodes"]) )#hidden to output layer between given size
+        # w1 = np.random.uniform(-self.size, self.size, ( network["inputNodes"], network["hiddenNodes"]) ) #input to hidden layer between given size
+        # w2 = np.random.uniform(-self.size, self.size, ( network["hiddenNodes"], network["outputNodes"]) )#hidden to output layer between given size
+        w1 = np.array([[3, 6], [4, 5]])  # weights for a node. inputs --> hidden node
+        w2 = np.array([2, 4])
         self.weights = [w1, w2]
-        self.hiddenNodes = np.random.uniform( -self.size, self.size, network["hiddenNodes"] )
+        self.hiddenNodes = np.array([1, -6])  # set to random after
+        # self.hiddenNodes = np.random.uniform( -self.size, self.size, network["hiddenNodes"] )
         self.outputNode = np.random.uniform(-self.size, self.size, size=len(self.desiredOutput))
 
     def output(self):
-        print(self.weights[1])
-        print(self.weights[1].shape)
+        print(self.weights[0])
+        print(self.weights[0].shape)
         print(self.inputs)
         print(self.inputs.shape)
 
@@ -37,6 +40,12 @@ class Mlp:
     def sigmoidDerivative(self, x):
         sigD = x * (1 - x)
         return sigD
+
+    def f(self):
+        SjI = np.dot(self.inputs, self.weights[0])
+        SjH = self.hiddenNodes * self.bias
+        #Sj = np.add(S)
+        print(SjI, SjH)
 
     def feedForward(self, node):
         Sj = 0
@@ -169,5 +178,6 @@ results = []
 p = Mlp(inputSet, outputSet)
 for j in range(1):
     # p.trainNetwork()
-    p.output()
+    p.f()
+    # p.output()
     #if j % 100 == 0:
