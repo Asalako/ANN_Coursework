@@ -10,11 +10,11 @@ import numpy as np
 
 class Mlp:
 
-    def __init__(self, inputData, output):
+    def __init__(self, inputData, output, nodes=2, lp=0.1):
         self.size = 2.5
         self.inputs = inputData
         self.desiredOutput = output
-        self.learningRate = 0.1
+        self.learningRate = lp
 
         self.epoch = 0
         self.bias = 1
@@ -23,25 +23,12 @@ class Mlp:
             "outputNodes": 1,
             "hiddenNodes": 2
         }
+        network["hiddenNodes"] = nodes
         w1 = np.random.uniform(-self.size, self.size, ( network["hiddenNodes"], network["inputNodes"]) ) #input to hidden layer
         w2 = np.random.uniform(-self.size, self.size,  network["hiddenNodes"] ) #hidden to output layer
         self.weights = [w1, w2]
         self.hiddenNodes = np.random.uniform( -self.size, self.size, network["hiddenNodes"] )
         self.outputNode = np.random.uniform(-self.size, self.size, size=1)[0]
-
-        #self.hiddenNodes = [1, -6]  # set to random after
-        #w1 = [[3, 4], [6, 5]]  # weights for a node. inputs --> hidden node
-        #w2 = [2, 4]
-
-
-
-    #         self.weights = [w1, w2]
-    #         self.learningRate = 0.01
-    #         self.target = output
-    #         self.outputBias = 1;
-
-    def output(self):
-        print(self.weights[0])
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
@@ -90,8 +77,8 @@ class Mlp:
                 weight[j] += self.learningRate * delta * self.inputs[j]
                 weight[j] = round(weight[j], roundNumber)
 
-        print(self.outputNode, sigODervivative)
-        print(self.sigO)
+        #print(self.desiredOutput - self.sigO)
+        #print(self.sigO)
         self.epoch += 1
         return
 
@@ -105,7 +92,6 @@ class Mlp:
         self.sigO = self.sigmoid(sumSo)
         self.backwardPass(activations)
         return
-
 
 def arrayCon(arr):
     array = [[elem] for elem in arr]
@@ -147,6 +133,7 @@ def standardiseDataset(data, columnNames):
 
     return pd.DataFrame(dataDict)
 
+#def Mse(data):
 
 data = pd.read_excel(
     r'C:\Users\ayo-n\Documents\University\Lecture_Files\Year 2\Semester 2\AI\CW\ANNCW\DataWithoutErrors.xlsx')
@@ -170,19 +157,35 @@ trainingSet = dataset.sample(frac=0.6, replace=False)
 inputSet = dictToList(trainingSet, ["T", "W", "SR", "DSP", "DRH"])
 outputSet = dictToList(trainingSet, ["PanE"])
 
-# inputSet = [[1, 0]]
-# outputSet = [1]
+# inputSet = [inputSet[0]]
+# outputSet = [outputSet[0]]
 
-prevSig = -999
-for t in range(1):
-    for i, o in zip(inputSet, outputSet):
-        p = Mlp(i, o)
-        for i in range(100):
-            p.trainNetwork()
-            if prevSig != p.sigO:
-                prevSig = p.sigO
-            else:
-                print(p.epoch)
-                break
-        print()
-p.output()
+epochs = []
+results = []
+nodes = [2, 4, 6, 8, 10]
+lps = [0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
+for node in nodes:
+    for lp in lps:
+        for i, o in zip(inputSet, outputSet):
+            prevSig = -999
+            p = Mlp(i, o, node, lp)
+            for j in range(10000):
+                p.trainNetwork()
+                if j % 100 == 0:
+                    print(p.desiredOutput - p.sigO)
+                if prevSig != p.sigO:
+                    prevSig = p.sigO
+                else:
+                    epochs.append(p.epoch)
+                    print(p.epoch)
+                    break
+        results.append([node, lp, sum(epochs)/len(epochs)])
+
+best = 100000
+best_result = []
+for result in results:
+    print("Number of nodes:", result[0])
+    print("Learning Rate:", result[1])
+    print("Avg Epoch:", result[2])
+    if result[2] < best:
+        best_result = result
