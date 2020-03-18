@@ -33,19 +33,20 @@ class Mlp(object):
         output = self.sigmoid(self.uj_layer2)
         return output
 
-    def sigmoid(self, s, deriv=False):
-        if (deriv == True):
-            return s * (1 - s)
-        return 1 / (1 + np.exp(-s))
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
+
+    def sigmoidDerivative(self, x):
+        return x * (1 - x)
 
     def backward(self, input_set, desired_output, output):
         # backward propogate through the network
         self.output_error = desired_output.T - output  # error in output
-        self.output_delta = self.output_error * self.sigmoid(output, deriv=True)
+        self.output_delta = self.output_error * self.sigmoidDerivative(output)
 
         self.hidden_error = self.output_delta.dot(
             self.layer2_weights.T)  # z2 error: how much our hidden layer weights contribute to output error
-        self.hidden_delta = self.hidden_error * self.sigmoid(self.uj, deriv=True)  # applying derivative of sigmoid to z2 error
+        self.hidden_delta = self.hidden_error * self.sigmoidDerivative(self.uj)  # applying derivative of sigmoid to z2 error
 
         prev_w1 = np.copy(self.layer1_weights)
         prev_w2 = np.copy(self.layer2_weights)
@@ -54,23 +55,22 @@ class Mlp(object):
         self.layer1_weights += input_set.T.dot(self.hidden_delta) * self.learningRate  # adjusting first set (input -> hidden) weights
         self.layer2_weights += self.uj.T.dot(self.output_delta) * self.learningRate # adjusting second set (hidden -> output) weights
 
-        if self.momentum_bool == True:
+        if self.momentum_bool:
             self.momentum(previous_weights)
 
         ce_error = self.ce(self.output_error, output)
         self.error_history.append(np.average(np.abs(ce_error)))
 
-        #print(self.mse(self.output_error))
-
+        # print(self.mse(self.output_error))
     def train(self, input_set, desired_output):
         output = self.feedForward(input_set)
         self.backward(input_set, desired_output, output)
 
-    def testModel(self, inputSet, desiredOutput):
-        desiredOutput = np.array([desiredOutput])
-        actualOutput = self.feedForward(inputSet)
-        outputError =  actualOutput - desiredOutput.T
-        return self.mse(outputError)
+    def testModel(self, input_set, desired_output):
+        desired_output = np.array([desired_output])
+        actual_output = self.feedForward(input_set)
+        output_error =  actual_output - desired_output.T
+        return self.mse(output_error)
 
     def mse(self, error):
         mse = ((np.sum(error)**2)/len(error) )**1/2
@@ -85,6 +85,11 @@ class Mlp(object):
         print(ce)
         return ce
 
+    def validate(self, input_set, desired_output):
+        desired_output = np.array([desired_output])
+        actual_output = self.feedForward(input_set)
+        output_error = actual_output - desired_output.T
+        
     def momentum(self, prev_weights):
         constant = 0.9
         self.layer1_weights += (self.layer1_weights - prev_weights[0]) * constant
@@ -138,40 +143,43 @@ def standardiseDataset(data, columnNames):
 
     return pd.DataFrame(dataDict)
 
-
-
 data = pd.read_excel(
     r'C:\Users\ayo-n\Documents\University\Lecture_Files\Year 2\Semester 2\AI\CW\ANNCW\DataWithoutErrors.xlsx')
 
 columns = ["T", "W", "SR", "DSP", "DRH", "PanE"]
+predictor = ["T", "W", "SR", "DSP", "DRH"]
+predictand = ["PanE"]
 dictToList(data, columns)
-
 dataset = standardiseDataset(data, columns)
 
-trainingSet = dataset.sample(frac=0.6, replace=False)
-validationSet = dataset.sample(frac=0.2, replace=False)
-testingSet =  dataset.sample(frac=0.2, replace=False)
-testInput = dictToList(testingSet, ["T", "W", "SR", "DSP", "DRH"])
-testOutput = dictToList(testingSet, ["PanE"])
+training_set = dataset.sample(frac=0.6, replace=False)
+train_input = dictToList(training_set, predictor)
+train_output = dictToList(training_set, predictand)
+train_input = np.array(train_input)
+train_output = np.array([train_output])
 
-inputSet = dictToList(trainingSet, ["T", "W", "SR", "DSP", "DRH"])
-outputSet = dictToList(trainingSet, ["PanE"])
+validation_set = dataset.sample(frac=0.2, replace=False)
+valid_input = dictToList(validation_set, predictor)
+valid_output = dictToList(validation_set, predictand)
 
-inputSet = np.array(inputSet)
-outputSet = np.array([outputSet])
+testing_set =  dataset.sample(frac=0.2, replace=False)
+test_input = dictToList(testing_set, predictor)
+test_output = dictToList(testing_set, predictand)
+
+
 
 NN = Mlp()
 epochs = 30
 for i in range(epochs): #trains the NN 1000 times
     # if (i % 100 == 0):
     #     print("Loss: " + str(np.mean(np.square(desired_output - NN.feedForward(input_set)))))
-    # NN.train(inputSet, outputSet)
-    NN.annealing(epochs, i, inputSet, outputSet)
-print("test", NN.testModel(testInput, testOutput))
+    # NN.train(train_input, train_output)
+    NN.annealing(epochs, i, train_input, train_output)
+print("test", NN.testModel(test_input, test_output))
 
 # epochs = []
 # results = []
-# p = Mlp(inputSet, outputSet)
+# p = Mlp(train_input, train_output)
 # for j in range(1):
 #     p.trainNetwork()
     # p.output()
