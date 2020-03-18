@@ -1,7 +1,7 @@
 
 import pandas as pd
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 class Mlp(object):
     def __init__(self):
@@ -9,8 +9,8 @@ class Mlp(object):
         self.size = 2.5
         self.inputSize = 5
         self.outputSize = 1
-        self.hiddenSize = 5
-        self.learningRate = 0.01
+        self.hiddenSize = 2
+        self.learningRate = 0.05
         network = {
             "inputNodes": 5,
             "hiddenNodes": 5,
@@ -20,6 +20,9 @@ class Mlp(object):
         # weights
         self.layer1_weights = np.random.uniform(-self.size, self.size, (network["inputNodes"], network["hiddenNodes"]))
         self.layer2_weights = np.random.uniform(-self.size, self.size, (network["hiddenNodes"], network["outputNodes"]))
+
+        self.error_history = []
+        self.momentum_bool = True
 
     def feedForward(self, input_set):
         # forward propogation through the network
@@ -43,9 +46,19 @@ class Mlp(object):
             self.layer2_weights.T)  # z2 error: how much our hidden layer weights contribute to output error
         self.hidden_delta = self.hidden_error * self.sigmoid(self.uj, deriv=True)  # applying derivative of sigmoid to z2 error
 
+        prev_w1 = np.copy(self.layer1_weights)
+        prev_w2 = np.copy(self.layer2_weights)
+        previous_weights = [prev_w1, prev_w2 ]
+
         self.layer1_weights += input_set.T.dot(self.hidden_delta) * self.learningRate  # adjusting first set (input -> hidden) weights
         self.layer2_weights += self.uj.T.dot(self.output_delta) * self.learningRate # adjusting second set (hidden -> output) weights
-        self.ce(self.output_error, output)
+
+        if self.momentum_bool == True:
+            self.momentum(previous_weights)
+
+        ce_error = self.ce(self.output_error, output)
+        self.error_history.append(np.average(np.abs(ce_error)))
+
         #print(self.mse(self.output_error))
 
     def train(self, input_set, desired_output):
@@ -69,8 +82,12 @@ class Mlp(object):
         denominator =  np.sum((output_set - mean_arr)**2)
         ce = 1 - (numerator / denominator)
         print(ce)
+        return ce
 
-        print(ce)
+    def momentum(self, prev_weights):
+        constant = 0.9
+        self.layer1_weights += (self.layer1_weights - prev_weights[0]) * constant
+        self.layer2_weights += (self.layer2_weights - prev_weights[1]) * constant
 
 def arrayCon(arr):
     array = [[elem] for elem in arr]
@@ -137,8 +154,8 @@ inputSet = np.array(inputSet)
 outputSet = np.array([outputSet])
 
 NN = Mlp()
-
-for i in range(10): #trains the NN 1000 times
+epochs = 30
+for i in range(epochs): #trains the NN 1000 times
     # if (i % 100 == 0):
     #     print("Loss: " + str(np.mean(np.square(desired_output - NN.feedForward(input_set)))))
     NN.train(inputSet, outputSet)
@@ -151,3 +168,15 @@ print("test", NN.testModel(testInput, testOutput))
 #     p.trainNetwork()
     # p.output()
     #if j % 100 == 0:
+
+# plt.plot(range(epochs), NN.error_history)
+# plt.xlabel('Epoch')
+# plt.ylabel('Error')
+# plt.show()
+
+#
+#     data = np.squeeze()
+#     plt.plot(data)
+#     plt.ylabel("MSE, LR")
+#     plt.xlabel('Epochs. Hidden Nodes: ')
+#     plt.show()
