@@ -215,7 +215,7 @@ def standardise_dataset(data, columnNames):
         minimum = data_set[key].min()
         maximum = data_set[key].max()
 
-        for key in predictor:
+        for key in predictor_name:
             s = standardisation(predictor_name[key], minimum, maximum)
             predictor_name[key] = s
 
