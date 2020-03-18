@@ -10,7 +10,7 @@ class Mlp(object):
         self.inputSize = 5
         self.outputSize = 1
         self.hiddenSize = 2
-        self.learningRate = 0.05
+        self.learningRate = 0.01
         network = {
             "inputNodes": 5,
             "hiddenNodes": 5,
@@ -169,10 +169,10 @@ print("test", NN.testModel(testInput, testOutput))
     # p.output()
     #if j % 100 == 0:
 
-# plt.plot(range(epochs), NN.error_history)
-# plt.xlabel('Epoch')
-# plt.ylabel('Error')
-# plt.show()
+plt.plot(range(epochs), NN.error_history)
+plt.xlabel('Epoch')
+plt.ylabel('Error')
+plt.show()
 
 #
 #     data = np.squeeze()
