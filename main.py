@@ -34,6 +34,7 @@ class Mlp(object):
         self.momentum_bool = False
         self.guess_correct = 0
         self.models = []
+        self.validation_count = 0
 
     # Forward propagation through the network returns activations values x layer weights
     def forward_pass(self, input_set):
@@ -76,7 +77,7 @@ class Mlp(object):
             self.momentum(previous_weights)
 
         # MSE output, was used for graphs
-        print("MSE:", self.mse(self.output_error))
+        #print("MSE:", self.mse(self.output_error))
         self.error_history.append(np.average(np.abs(self.mse(self.output_error))))
 
     # Applies forward and backward propagation to train the network
@@ -92,14 +93,13 @@ class Mlp(object):
         # Checks each data point to see if it fits in the model and updates a counter
         for i in range(len(actual_output)):
             result = self.class_point(desired_output.T[i], actual_output[i])
-            print("Model Output:", desired_output.T[i], "Observed Output: ", actual_output[i],
-                  result)
+            # print("Model Output:", desired_output.T[i], "Observed Output: ", actual_output[i], result)
 
         # Calculating accuracy of the model
         self.correct = self.guess_correct
         self.accuracy = (self.correct / len(actual_output)) * 100
         self.guess_correct = 0
-        print("Accuracy: {:.3f}%".format(self.accuracy), self.correct)
+        #print("Accuracy: {:.3f}%".format(self.accuracy), self.correct)
 
         # return actual_output, desired_output.T
 
@@ -126,21 +126,31 @@ class Mlp(object):
         mean_arr = np.array([[mean] * len(output_set)])
         denominator = np.sum((output_set - mean_arr) ** 2)
         ce = 1 - (numerator / denominator)
-        # print("CE:",ce)
         return ce
 
     # Validation on the model. Will terminate the training if the model seems to be degrade 
-    def validate(self, input_set, desired_output):
+    def validate(self, input_set, desired_output, epoch):
         desired_output = np.array([desired_output])
         actual_output = self.forward_pass(input_set)
         output_error = actual_output - desired_output.T
         validation_mse = self.mse(output_error)
+
+        # Check to make sure the list is not empty
         if len(self.validation_history) > 1:
             prev_mse = self.validation_history[-1]
-            print(prev_mse, validation_mse)
+            # Compares previous error and current, append model
             if validation_mse > prev_mse:
-                print("degrade")
+                self.validation_count += 1
+                self.models.append([np.copy(self.layer1_weights), np.copy(self.layer2_weights), epoch])
+                # Condition to stop model continuously degrade
+                if self.validation_count >= 3 and difference_percentage(validation_mse, prev_mse) < 0.001:
+                    self.validation_count = 0
+                    return True
+            else:
+                self.validation_count = 0
+
         self.validation_history.append(validation_mse)
+        return False
 
     # Applies momentum calculation to the weights
     def momentum(self, prev_weights):
@@ -221,6 +231,19 @@ def standardise_dataset(data, columnNames):
 
     return pd.DataFrame(data_dict)
 
+
+def graph(epochs, NN):
+    plt.plot(range(epochs+1), NN.error_history)
+    plt.xlabel('Epochs')
+    plt.ylabel('Mean Squared Error')
+    plt.show()
+
+
+def difference_percentage(value1, value2):
+    if value1 < value2:
+        value2, value1 = value1, value2
+    return (value1 - value2) / value1
+
 # Getting data from spreadsheet
 data = pd.read_excel(
     r'C:\Users\ayo-n\Documents\University\Lecture_Files\Year 2\Semester 2\AI\CW\ANNCW\DataWithoutErrors.xlsx')
@@ -247,18 +270,35 @@ test_input = dict_to_list(testing_set, predictor)
 test_output = dict_to_list(testing_set, predictand)
 
 NN = Mlp(dict_to_list(dataset, predictand))
-epochs = 10
+epochs = 10000
 for i in range(epochs):  # trains the NN 1000 times
-    # if i % 100 == 0:
-    # NN.train(train_input, train_output)
-    NN.annealing(epochs, i, train_input, train_output)
-    NN.validate(valid_input, valid_output)
-# NN.test_model(test_input, test_output)
+    NN.train(train_input, train_output)
+    # NN.annealing(epochs, i, train_input, train_output)
+    if i % 5 == 0:
+        result = NN.validate(valid_input, valid_output, i)
+        if result:
+            graph(i, NN)
+            break
+
+acc = 0
+if result:
+    for model in NN.models:
+        NN.layer1_weights = model[0]
+        NN.layer2_weights = model[1]
+        NN.test_model(test_input, test_output)
+        if NN.accuracy > acc:
+            acc = NN.accuracy
+            best_model = [model, NN.accuracy]
+        graph(i, NN)
+
+else:
+    NN.test_model(test_input, test_output)
+    best_model = [[NN.layer1_weights, NN.layer2_weights, i], NN.accuracy]
+    graph(i, NN)
+
+print(best_model[0][0])
+print(best_model[0][1])
+print("Accuracy: {:.3f}%".format(best_model[1]))
+print("Total Epochs:", best_model[0][2])
 
 # Plotting graph
-plt.plot(range(epochs), NN.error_history)
-plt.xlabel('Epochs')
-plt.ylabel('Mean Squared Error')
-plt.show()
-
-
