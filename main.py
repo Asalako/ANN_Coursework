@@ -5,12 +5,9 @@ import math as math
 import matplotlib.pyplot as plt
 
 class Mlp(object):
-    def __init__(self):
+    def __init__(self, data_set):
+        self.classifier_range = self.classifier(data_set)
         # parameters
-        self.size = 2.5
-        self.inputSize = 5
-        self.outputSize = 1
-        self.hiddenSize = 2
         self.learningRate = 0.01
         network = {
             "inputNodes": 5,
@@ -18,12 +15,17 @@ class Mlp(object):
             "outputNodes": 1
         }
 
-        # weights
-        self.layer1_weights = np.random.uniform(-self.size, self.size, (network["inputNodes"], network["hiddenNodes"]))
-        self.layer2_weights = np.random.uniform(-self.size, self.size, (network["hiddenNodes"], network["outputNodes"]))
+        self.layer1_size = network["inputNodes"]/2
+        self.layer2_size = network["hiddenNodes"]/2
 
+        # weights
+        self.layer1_weights = np.random.uniform(-self.layer1_size, self.layer1_size, (network["inputNodes"], network["hiddenNodes"]))
+        self.layer2_weights = np.random.uniform(-self.layer2_size, self.layer2_size, (network["hiddenNodes"], network["outputNodes"]))
+
+        self.validation_history = []
         self.error_history = []
         self.momentum_bool = False
+        self.guess_correct = 0
 
     def feedForward(self, input_set):
         # forward propogation through the network
@@ -58,10 +60,9 @@ class Mlp(object):
         if self.momentum_bool:
             self.momentum(previous_weights)
 
-        ce_error = self.ce(self.output_error, output)
-        self.error_history.append(np.average(np.abs(ce_error)))
+        print("MSE:", self.mse(self.output_error))
+        self.error_history.append(np.average(np.abs(self.mse(self.output_error))))
 
-        # print(self.mse(self.output_error))
     def train(self, input_set, desired_output):
         output = self.feedForward(input_set)
         self.backward(input_set, desired_output, output)
@@ -70,11 +71,30 @@ class Mlp(object):
         desired_output = np.array([desired_output])
         actual_output = self.feedForward(input_set)
         output_error =  actual_output - desired_output.T
-        return self.mse(output_error)
+        for i in range( len(actual_output) ):
+            print("Model Output:", desired_output.T[i], "Observed Output: ", actual_output[i],
+                  self.class_point(desired_output.T[i], actual_output[i]))
+        self.correct = self.guess_correct
+        self.accuracy = (self.correct / len(actual_output))*100
+        self.guess_correct = 0
+        print("Accuracy: {:.3f}%".format(self.accuracy), self.correct)
 
+        #return actual_output, desired_output.T
+
+    # Calculating the loss using Mean Squared Error
     def mse(self, error):
-        mse = ((np.sum(error)**2)/len(error) )**1/2
+        mse = (np.sum(error)**2)/len(error)
         return mse
+
+        return mse
+
+    def msre(self, error, output_set):
+        sum = 0
+        err_length = len(error)
+        for i in range(err_length):
+            sum += ( (output_set[0][i] - error[i][0]) / error[i][0] )**2
+        msre = sum /err_length 
+        return msre
 
     def ce(self, error, output_set):
         numerator = np.sum(error**2)
@@ -82,13 +102,20 @@ class Mlp(object):
         mean_arr = np.array([[mean] * len(output_set)])
         denominator =  np.sum((output_set - mean_arr)**2)
         ce = 1 - (numerator / denominator)
-        print(ce)
+        #print("CE:",ce)
         return ce
 
     def validate(self, input_set, desired_output):
         desired_output = np.array([desired_output])
         actual_output = self.feedForward(input_set)
         output_error = actual_output - desired_output.T
+        validation_mse = self.mse(output_error)
+        if len(self.validation_history) > 1:
+            prev_mse = self.validation_history[-1]
+            print(prev_mse, validation_mse)
+            if validation_mse > prev_mse:
+                print("degrade")
+        self.validation_history.append(validation_mse)
         
     def momentum(self, prev_weights):
         constant = 0.9
@@ -101,6 +128,26 @@ class Mlp(object):
         anneal = end_lr + ( start_lr - end_lr) * ( 1 - (1 / (1 + math.exp( 10 - ((20*epoch) / max_epochs) ))))
         self.learningRate = anneal
         self.train(input_set, desired_output)
+
+    def classifier(self, predictand):
+        classes = []
+        for i in predictand:
+            if i not in classes:
+                classes.append(float(i))
+        classes = sorted(classes)
+        
+        sum = 0
+        for i in range(len(classes) - 1):
+            sum += abs(classes[i + 1] - classes[i])
+        avg = sum * 2 / len(classes)
+        return avg
+    
+    def class_point(self, model, observed):
+        diff = abs(model - observed)
+        if diff < self.classifier_range:
+            self.guess_correct += 1
+            return "True"
+        return "False"
 
 
 def arrayCon(arr):
@@ -162,20 +209,19 @@ validation_set = dataset.sample(frac=0.2, replace=False)
 valid_input = dictToList(validation_set, predictor)
 valid_output = dictToList(validation_set, predictand)
 
-testing_set =  dataset.sample(frac=0.2, replace=False)
+testing_set = dataset.sample(frac=0.2, replace=False)
 test_input = dictToList(testing_set, predictor)
 test_output = dictToList(testing_set, predictand)
 
-
-
-NN = Mlp()
-epochs = 30
+NN = Mlp(dictToList(dataset, predictand))
+epochs = 10000
 for i in range(epochs): #trains the NN 1000 times
     # if (i % 100 == 0):
     #     print("Loss: " + str(np.mean(np.square(desired_output - NN.feedForward(input_set)))))
     # NN.train(train_input, train_output)
     NN.annealing(epochs, i, train_input, train_output)
-print("test", NN.testModel(test_input, test_output))
+    NN.validate(valid_input, valid_output)
+# NN.testModel(test_input, test_output)
 
 # epochs = []
 # results = []
@@ -190,7 +236,6 @@ plt.xlabel('Epoch')
 plt.ylabel('Coefficient of Efficiency')
 plt.show()
 
-#
 #     data = np.squeeze()
 #     plt.plot(data)
 #     plt.ylabel("MSE, LR")
