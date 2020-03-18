@@ -7,25 +7,25 @@ class Mlp:
     def __init__(self, inputData, output, nodes=2, lp=0.1):
         self.size = 2.5
         self.inputs = inputData
-        self.desiredOutput = output
+        self.desiredOutput = np.array(arrayCon(output), dtype=float)
         self.learningRate = lp
 
         self.epoch = 0
         network = {
-            "inputNodes": 2,
+            "inputNodes": 5,
             "outputNodes": 1,
             "hiddenNodes": 2
         }
         network["hiddenNodes"] = nodes
-        # w1 = np.random.uniform(-self.size, self.size, ( network["inputNodes"], network["hiddenNodes"]) ) #input to hidden layer between given size
-        # w2 = np.random.uniform(-self.size, self.size, ( network["hiddenNodes"], network["outputNodes"]) )#hidden to output layer between given size
-        w1 = np.array([[3, 6], [4, 5]], dtype=float)  # weights for a node. inputs --> hidden node
-        w2 = np.array([2, 4], dtype=float)
+        w1 = np.random.uniform(-self.size, self.size, ( network["inputNodes"], network["hiddenNodes"]) ) #input to hidden layer between given size
+        w2 = np.random.uniform(-self.size, self.size, ( network["hiddenNodes"], network["outputNodes"]) )#hidden to output layer between given size
+        # w1 = np.array([[3, 6], [4, 5]], dtype=float)  # weights for a node. inputs --> hidden node
+        # w2 = np.array([2, 4], dtype=float)
         self.weights = [w1, w2]
-        self.hiddenNodes = np.array([1, -6], dtype=float)  # set to random after
-        # self.hiddenNodes = np.random.uniform( -self.size, self.size, network["hiddenNodes"] )
-        self.outputNode = [-3.92]
-        # self.outputNode = np.random.uniform(-self.size, self.size, size=len(self.desiredOutput))
+        # self.hiddenNodes = np.array([1, -6], dtype=float)  # set to random after
+        self.hiddenNodes = np.random.uniform( -self.size, self.size, network["hiddenNodes"] )
+        # self.outputNode = [-3.92]
+        self.outputNode = np.random.uniform(-self.size, self.size, size=1)
 
     def output(self):
         print(self.weights[0])
@@ -59,9 +59,9 @@ class Mlp:
         deltaOutputs = []
         #Finding delta for the output node
         sigODervivative = self.sigmoidDerivative(self.sigmoidOutput)
-        deltaO = np.subtract(self.desiredOutput, self.sigmoidOutput) * sigODervivative
+        deltaO = (self.desiredOutput - self.sigmoidOutput) * sigODervivative
 
-        hiddenError = deltaO * self.weights[1]
+        hiddenError = deltaO * self.weights[1].T
         hiddenDelta =  hiddenError * self.sigmoidDerivative(activations)
 
         # for i in range(len(activations)):
@@ -77,8 +77,8 @@ class Mlp:
         self.hiddenNodes = np.add(self.hiddenNodes, self.learningRate * hiddenDelta)
         #print("next",self.hiddenNodes)
         #print(self.weights[1], hiddenDelta, activations )
-        self.weights[1] = np.add(self.weights[1], self.learningRate * deltaO * activations)
-        #print(self.weights[1])
+        self.weights[1] = np.add(self.weights[1].T, self.learningRate * deltaO * activations)
+        print(self.weights[1].shape)
         #updating hidden nodes and weights from hidden layer --> output node
         self.weights[0] = np.add(self.weights[0], self.learningRate * hiddenDelta * self.inputs.T)
         #updating weights from inputs --> hidden layer
@@ -166,8 +166,8 @@ trainingSet = dataset.sample(frac=0.6, replace=False)
 inputSet = dictToList(trainingSet, ["T", "W", "SR", "DSP", "DRH"])
 outputSet = dictToList(trainingSet, ["PanE"])
 
-inputSet = [[1, 0], [2,1]]
-outputSet = [1,1]
+# inputSet = [[1, 0], [2,1]]
+# outputSet = [1,1]
 inputSet = np.array(inputSet)
 outputSet = np.array(outputSet)
 
