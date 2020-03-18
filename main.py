@@ -1,6 +1,7 @@
 
 import pandas as pd
 import numpy as np
+import math as math
 import matplotlib.pyplot as plt
 
 class Mlp(object):
@@ -10,7 +11,7 @@ class Mlp(object):
         self.inputSize = 5
         self.outputSize = 1
         self.hiddenSize = 2
-        self.learningRate = 0.05
+        self.learningRate = 0.01
         network = {
             "inputNodes": 5,
             "hiddenNodes": 5,
@@ -22,7 +23,7 @@ class Mlp(object):
         self.layer2_weights = np.random.uniform(-self.size, self.size, (network["hiddenNodes"], network["outputNodes"]))
 
         self.error_history = []
-        self.momentum_bool = True
+        self.momentum_bool = False
 
     def feedForward(self, input_set):
         # forward propogation through the network
@@ -89,6 +90,14 @@ class Mlp(object):
         self.layer1_weights += (self.layer1_weights - prev_weights[0]) * constant
         self.layer2_weights += (self.layer2_weights - prev_weights[1]) * constant
 
+    def annealing(self, max_epochs, epoch, input_set, desired_output, start=0.05, end=0.01):
+        end_lr = end
+        start_lr = start
+        anneal = end_lr + ( start_lr - end_lr) * ( 1 - (1 / (1 + math.exp( 10 - ((20*epoch) / max_epochs) ))))
+        self.learningRate = anneal
+        self.train(input_set, desired_output)
+
+
 def arrayCon(arr):
     array = [[elem] for elem in arr]
     return array
@@ -148,8 +157,6 @@ testOutput = dictToList(testingSet, ["PanE"])
 inputSet = dictToList(trainingSet, ["T", "W", "SR", "DSP", "DRH"])
 outputSet = dictToList(trainingSet, ["PanE"])
 
-# inputSet = [[1, 0], [2,1]]
-# outputSet = [1,1]
 inputSet = np.array(inputSet)
 outputSet = np.array([outputSet])
 
@@ -158,7 +165,8 @@ epochs = 30
 for i in range(epochs): #trains the NN 1000 times
     # if (i % 100 == 0):
     #     print("Loss: " + str(np.mean(np.square(desired_output - NN.feedForward(input_set)))))
-    NN.train(inputSet, outputSet)
+    # NN.train(inputSet, outputSet)
+    NN.annealing(epochs, i, inputSet, outputSet)
 print("test", NN.testModel(testInput, testOutput))
 
 # epochs = []
@@ -169,10 +177,10 @@ print("test", NN.testModel(testInput, testOutput))
     # p.output()
     #if j % 100 == 0:
 
-# plt.plot(range(epochs), NN.error_history)
-# plt.xlabel('Epoch')
-# plt.ylabel('Error')
-# plt.show()
+plt.plot(range(epochs), NN.error_history)
+plt.xlabel('Epoch')
+plt.ylabel('Coefficient of Efficiency')
+plt.show()
 
 #
 #     data = np.squeeze()
