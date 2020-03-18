@@ -25,7 +25,9 @@ class Mlp:
         # self.hiddenNodes = np.array([1, -6], dtype=float)  # set to random after
         self.hiddenNodes = np.random.uniform( -self.size, self.size, network["hiddenNodes"] )
         # self.outputNode = [-3.92]
-        self.outputNode = np.random.uniform(-self.size, self.size, size=1)
+        self.outputNode = np.array([np.random.uniform(-self.size, self.size, size=1)])
+        self.outBias = np.array([[1]])
+        # self.outputNode = [np.random.uniform(-self.size, self.size, size=1)]
 
     def output(self):
         print(self.weights[0])
@@ -61,7 +63,7 @@ class Mlp:
         sigODervivative = self.sigmoidDerivative(self.sigmoidOutput)
         deltaO = (self.desiredOutput - self.sigmoidOutput) * sigODervivative
 
-        hiddenError = deltaO * self.weights[1].T
+        hiddenError = deltaO.dot(self.weights[1].T) #(866, 2)
         hiddenDelta =  hiddenError * self.sigmoidDerivative(activations)
 
         # for i in range(len(activations)):
@@ -71,16 +73,17 @@ class Mlp:
 
         #Updating all weights
         #updating output node
-        #print(self.outputNode, deltaO)
-        self.outputNode = np.add(self.outputNode, self.learningRate * deltaO)
-        #print(self.outputNode)
+        #print(self.outputNode.shape, deltaO.shape)
+        self.outputNode = np.add(self.outputNode, self.learningRate * deltaO.dot(self.outBias))
+        print(self.outputNode.shape, deltaO.dot(self.outBias).shape)
         self.hiddenNodes = np.add(self.hiddenNodes, self.learningRate * hiddenDelta)
         #print("next",self.hiddenNodes)
         #print(self.weights[1], hiddenDelta, activations )
-        self.weights[1] = np.add(self.weights[1].T, self.learningRate * deltaO * activations)
-        print(self.weights[1].shape)
+        self.weights[1] = np.add(self.weights[1], self.learningRate * deltaO.T.dot(activations))
+        print(self.weights[1].shape, hiddenDelta.T.dot(activations).shape)
+
         #updating hidden nodes and weights from hidden layer --> output node
-        self.weights[0] = np.add(self.weights[0], self.learningRate * hiddenDelta * self.inputs.T)
+        self.weights[0] = np.add(self.weights[0], self.learningRate * deltaO * self.inputs.T)
         #updating weights from inputs --> hidden layer
         #print(hiddenDelta, deltaO)
         #print(self.desiredOutput - self.sigO)
