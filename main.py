@@ -45,6 +45,7 @@ class Mlp(object):
 
         self.layer1_weights += input_set.T.dot(self.hidden_delta) * self.learningRate  # adjusting first set (input -> hidden) weights
         self.layer2_weights += self.uj.T.dot(self.output_delta) * self.learningRate # adjusting second set (hidden -> output) weights
+        self.ce(self.output_error, output)
         #print(self.mse(self.output_error))
 
     def train(self, input_set, desired_output):
@@ -54,13 +55,22 @@ class Mlp(object):
     def testModel(self, inputSet, desiredOutput):
         desiredOutput = np.array([desiredOutput])
         actualOutput = self.feedForward(inputSet)
-        outputError = desiredOutput.T - actualOutput
+        outputError =  actualOutput - desiredOutput.T
         return self.mse(outputError)
 
     def mse(self, error):
-        mse = (np.sum(error)**2)/len(error)
-
+        mse = ((np.sum(error)**2)/len(error) )**1/2
         return mse
+
+    def ce(self, error, output_set):
+        numerator = np.sum(error**2)
+        mean = np.sum(output_set) / len(output_set)
+        mean_arr = np.array([[mean] * len(output_set)])
+        denominator =  np.sum((output_set - mean_arr)**2)
+        ce = 1 - (numerator / denominator)
+        print(ce)
+
+        print(ce)
 
 def arrayCon(arr):
     array = [[elem] for elem in arr]
@@ -128,7 +138,7 @@ outputSet = np.array([outputSet])
 
 NN = Mlp()
 
-for i in range(10000): #trains the NN 1000 times
+for i in range(10): #trains the NN 1000 times
     # if (i % 100 == 0):
     #     print("Loss: " + str(np.mean(np.square(desired_output - NN.feedForward(input_set)))))
     NN.train(inputSet, outputSet)
