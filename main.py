@@ -1,97 +1,76 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 13 00:23:27 2020
-
-@author: ayo-n
-"""
 
 import pandas as pd
 import numpy as np
 
-class Mlp:
 
-    def __init__(self, inputData, output, nodes=2, lp=0.1):
+class Mlp(object):
+    def __init__(self):
+        # parameters
         self.size = 2.5
-        self.inputs = inputData
-        self.desiredOutput = output
-        self.learningRate = lp
-
-        self.epoch = 0
-        self.bias = 1
+        self.inputSize = 5
+        self.outputSize = 1
+        self.hiddenSize = 5
+        self.learningRate = 0.01
         network = {
             "inputNodes": 5,
-            "outputNodes": 1,
-            "hiddenNodes": 2
+            "hiddenNodes": 5,
+            "outputNodes": 1
         }
-        network["hiddenNodes"] = nodes
-        w1 = np.random.uniform(-self.size, self.size, ( network["hiddenNodes"], network["inputNodes"]) ) #input to hidden layer
-        w2 = np.random.uniform(-self.size, self.size,  network["hiddenNodes"] ) #hidden to output layer
-        self.weights = [w1, w2]
-        self.hiddenNodes = np.random.uniform( -self.size, self.size, network["hiddenNodes"] )
-        self.outputNode = np.random.uniform(-self.size, self.size, size=1)[0]
 
-    def sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
+        # weights
+        self.layer1_weights = np.random.uniform(-self.size, self.size, (network["inputNodes"], network["hiddenNodes"]))
+        self.layer2_weights = np.random.uniform(-self.size, self.size, (network["hiddenNodes"], network["outputNodes"]))
 
-    def sigmoidDerivative(self, x):
-        sigD = x * (1 - x)
-        return sigD
+    def feedForward(self, input_set):
+        # forward propogation through the network
+        self.Sj = np.dot(input_set, self.layer1_weights)  # dot product of input_set (input) and first set of weights (3x2)
+        self.uj = self.sigmoid(self.Sj)  # activation function
+        self.uj_layer2 = np.dot(self.uj, self.layer2_weights)  # dot product of hidden layer (z2) and second set of weights (3x1)
+        output = self.sigmoid(self.uj_layer2)
+        return output
 
-    def feedForward(self, node):
-        Sj = 0
-        for i in range( len(self.inputs) ):
-            Sj += self.inputs[i] * self.weights[0][node][i]
-        Sj += self.hiddenNodes[node] * self.bias
-        uj = self.sigmoid(Sj)
-        return uj
+    def sigmoid(self, s, deriv=False):
+        if (deriv == True):
+            return s * (1 - s)
+        return 1 / (1 + np.exp(-s))
 
-    def backwardPass(self, activations):
-        roundNumber = 4
-        deltaOutputs = []
-        sigODervivative = self.sigmoidDerivative(self.sigO)
-        deltaO = (self.desiredOutput - self.sigO) * sigODervivative
+    def backward(self, input_set, desired_output, output):
+        # backward propogate through the network
+        self.output_error = desired_output.T - output  # error in output
+        self.output_delta = self.output_error * self.sigmoid(output, deriv=True)
 
-        for i in range(len(activations)):
-            sigDervivative = self.sigmoidDerivative(activations[i])
-            delta = self.weights[1][i] * deltaO * sigDervivative
-            deltaOutputs.append(delta)
+        self.hidden_error = self.output_delta.dot(
+            self.layer2_weights.T)  # z2 error: how much our hidden layer weights contribute to output error
+        self.hidden_delta = self.hidden_error * self.sigmoid(self.uj, deriv=True)  # applying derivative of sigmoid to z2 error
 
-        #Updating all weights
-        #updating output node
-        self.outputNode += self.learningRate * deltaO * self.bias
-        self.outputNode = round(self.outputNode, roundNumber)
+        self.layer1_weights += input_set.T.dot(self.hidden_delta) * self.learningRate  # adjusting first set (input -> hidden) weights
+        self.layer2_weights += self.uj.T.dot(self.output_delta) * self.learningRate # adjusting second set (hidden -> output) weights
+        self.ce(self.output_error, output)
+        #print(self.mse(self.output_error))
 
-        #updating hidden nodes and weights from hidden layer --> output node
-        for i in range( len(deltaOutputs) ):
-            delta = deltaOutputs[i]
-            self.hiddenNodes[i] += self.learningRate * delta * self.bias
-            self.hiddenNodes[i] = round(self.hiddenNodes[i], roundNumber)
-            self.weights[1][i] += self.learningRate * delta * activations[i]
-            self.weights[1][i] = round(self.weights[1][i], roundNumber)
+    def train(self, input_set, desired_output):
+        output = self.feedForward(input_set)
+        self.backward(input_set, desired_output, output)
 
-        #updating weights from inputs --> hidden layer
-        for i in range(len(self.weights[0])):
-            delta = deltaOutputs[i]
-            for j in range(len(self.weights[0][0])):
-                weight = self.weights[0][i]
-                weight[j] += self.learningRate * delta * self.inputs[j]
-                weight[j] = round(weight[j], roundNumber)
+    def testModel(self, inputSet, desiredOutput):
+        desiredOutput = np.array([desiredOutput])
+        actualOutput = self.feedForward(inputSet)
+        outputError =  actualOutput - desiredOutput.T
+        return self.mse(outputError)
 
-        #print(self.desiredOutput - self.sigO)
-        #print(self.sigO)
-        self.epoch += 1
-        return
+    def mse(self, error):
+        mse = ((np.sum(error)**2)/len(error) )**1/2
+        return mse
 
-    def trainNetwork(self):
-        changed = False
-        activations = []
-        for i in range(len(self.hiddenNodes)):
-            activations.append(self.feedForward(i))
+    def ce(self, error, output_set):
+        numerator = np.sum(error**2)
+        mean = np.sum(output_set) / len(output_set)
+        mean_arr = np.array([[mean] * len(output_set)])
+        denominator =  np.sum((output_set - mean_arr)**2)
+        ce = 1 - (numerator / denominator)
+        print(ce)
 
-        sumSo = np.dot(activations, self.weights[1]) + self.outputNode * self.bias
-        self.sigO = self.sigmoid(sumSo)
-        self.backwardPass(activations)
-        return
+        print(ce)
 
 def arrayCon(arr):
     array = [[elem] for elem in arr]
@@ -133,7 +112,7 @@ def standardiseDataset(data, columnNames):
 
     return pd.DataFrame(dataDict)
 
-#def Mse(data):
+
 
 data = pd.read_excel(
     r'C:\Users\ayo-n\Documents\University\Lecture_Files\Year 2\Semester 2\AI\CW\ANNCW\DataWithoutErrors.xlsx')
@@ -143,49 +122,32 @@ dictToList(data, columns)
 
 dataset = standardiseDataset(data, columns)
 
-# print(w1, "\n", w2)
-# print(weights)
-# bias = [ 1 * 1 for i in range(len(dataset["T"]))]
-# dataset["Bias"] = bias
-# =============================================================================
-# trainingSet = dataset.sample(frac=0.6, replace=False)
-# validationSet = dataset.sample(frac=0.2, replace=False)
-# testingSet =  dataset.sample(frac=0.2, replace=False)
-# =============================================================================
 trainingSet = dataset.sample(frac=0.6, replace=False)
+validationSet = dataset.sample(frac=0.2, replace=False)
+testingSet =  dataset.sample(frac=0.2, replace=False)
+testInput = dictToList(testingSet, ["T", "W", "SR", "DSP", "DRH"])
+testOutput = dictToList(testingSet, ["PanE"])
 
 inputSet = dictToList(trainingSet, ["T", "W", "SR", "DSP", "DRH"])
 outputSet = dictToList(trainingSet, ["PanE"])
 
-# inputSet = [inputSet[0]]
-# outputSet = [outputSet[0]]
+# inputSet = [[1, 0], [2,1]]
+# outputSet = [1,1]
+inputSet = np.array(inputSet)
+outputSet = np.array([outputSet])
 
-epochs = []
-results = []
-nodes = [2, 4, 6, 8, 10]
-lps = [0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
-for node in nodes:
-    for lp in lps:
-        for i, o in zip(inputSet, outputSet):
-            prevSig = -999
-            p = Mlp(i, o, node, lp)
-            for j in range(10000):
-                p.trainNetwork()
-                if j % 100 == 0:
-                    print(p.desiredOutput - p.sigO)
-                if prevSig != p.sigO:
-                    prevSig = p.sigO
-                else:
-                    epochs.append(p.epoch)
-                    print(p.epoch)
-                    break
-        results.append([node, lp, sum(epochs)/len(epochs)])
+NN = Mlp()
 
-best = 100000
-best_result = []
-for result in results:
-    print("Number of nodes:", result[0])
-    print("Learning Rate:", result[1])
-    print("Avg Epoch:", result[2])
-    if result[2] < best:
-        best_result = result
+for i in range(10): #trains the NN 1000 times
+    # if (i % 100 == 0):
+    #     print("Loss: " + str(np.mean(np.square(desired_output - NN.feedForward(input_set)))))
+    NN.train(inputSet, outputSet)
+print("test", NN.testModel(testInput, testOutput))
+
+# epochs = []
+# results = []
+# p = Mlp(inputSet, outputSet)
+# for j in range(1):
+#     p.trainNetwork()
+    # p.output()
+    #if j % 100 == 0:
